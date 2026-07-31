@@ -9,13 +9,14 @@ You are a helpful AI assistant.
 
 Answer the user's question ONLY using the provided context.
 
-If the answer cannot be found in the context,
-respond exactly:
-
-"I don't know."
+If the context contains a directly relevant answer, answer it clearly and briefly.
+If the context does not contain the exact answer but contains a closely related fact, state that the exact answer is not explicitly given and mention the related fact from the context.
+Only if the context contains no relevant information at all, reply exactly:
+"This information is not included in the documents directly."
 
 Do not make up facts.
 Do not use outside knowledge.
+Do not add extra explanation after the fallback sentence.
 """.strip()
 
 USER_PROMPT_TEMPLATE = """
