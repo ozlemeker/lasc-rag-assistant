@@ -9,18 +9,23 @@ komutuyla bulunur ve OpenAI client'i buna gore kurulur.
 """
 import re
 import subprocess
-
+from typing import TypedDict
+ 
 from openai import OpenAI
-from sympy import content
-
+ 
 from src.prompt import SYSTEM_PROMPT, build_user_prompt
-from src.retrieval import retrieve
-
+from src.retrieval import Source, retrieve
+ 
 MODEL = "Phi-3.5-mini-instruct-generic-cpu:2"
-
+ 
 _client: OpenAI | None = None
-
-
+ 
+ 
+class Answer(TypedDict):
+    answer: str
+    sources: list[Source]
+ 
+ 
 def _get_foundry_base_url() -> str:
     """Foundry Local servisinin calistigi portu `foundry service status`
     ciktisindan okur ve OpenAI-uyumlu base_url'i dondurur."""
@@ -33,8 +38,8 @@ def _get_foundry_base_url() -> str:
         raise RuntimeError(f"Foundry servisinin portu bulunamadi:\n{result.stdout}")
     port = match.group(1)
     return f"http://127.0.0.1:{port}/v1"
-
-
+ 
+ 
 def _get_client() -> OpenAI:
     """OpenAI client'ini ilk cagrida kurar, sonraki cagrilarda ayni
     instance'i dondurur."""
@@ -45,42 +50,47 @@ def _get_client() -> OpenAI:
             api_key="not-needed",
         )
     return _client
-
-
-def answer_question(question: str) -> str:
+ 
+ 
+def answer_question(question: str) -> Answer:
     """
     Soruyu retrieve() ile ilgili context'e baglar, SYSTEM_PROMPT ve
     build_user_prompt() ile mesaj listesi olusturur, Phi-3.5 Mini'ye
-    gonderir ve modelin cevabini string olarak dondurur.
+    gonderir ve cevapla birlikte kaynak listesini dondurur.
     """
-    context = retrieve(question)
+    retrieval = retrieve(question)
+    context = retrieval["context"]
+    sources = retrieval["sources"]
+ 
     user_prompt = build_user_prompt(question, context)
-
+ 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
     ]
-
+ 
     client = _get_client()
     response = client.chat.completions.create(
         model=MODEL,
         messages=messages,
         temperature=0,
     )
-
-    return response.choices[0].message.content
-
-    if content is None:
-        raise RuntimeError("Model returned an empty response.")
-
-    return content
-
-
+ 
+    return {
+        "answer": response.choices[0].message.content,
+        "sources": sources,
+    }
+ 
+ 
 if __name__ == "__main__":
     question = "What is the maximum rocket mass?"
-    answer = answer_question(question)
-
+    result = answer_question(question)
+ 
     print("Question:")
     print(question)
     print("\nAnswer:")
-    print(answer)
+    print(result["answer"])
+ 
+    print("\nSources:")
+    for src in result["sources"]:
+        print(f"- {src['file_name']} | Page {src['page']} | Chunk {src['chunk_index']}")

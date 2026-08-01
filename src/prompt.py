@@ -39,16 +39,16 @@ def build_user_prompt(question: str, context: str) -> str:
         .replace("{context}", context)
         .replace("{question}", question)
     )
-
-
+ 
+ 
 if __name__ == "__main__":
     from src.retrieval import retrieve
-
+ 
     question = "What is the maximum rocket mass?"
-    context = retrieve(question)
-
-    user_prompt = build_user_prompt(question, context)
-
+    result = retrieve(question)
+ 
+    user_prompt = build_user_prompt(question, result["context"])
+ 
     print("--- SYSTEM ---")
     print(SYSTEM_PROMPT)
     print("\n--- USER ---")
